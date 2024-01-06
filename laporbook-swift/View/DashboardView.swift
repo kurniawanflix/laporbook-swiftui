@@ -47,7 +47,6 @@ struct DashboardView: View {
                 .onAppear(perform: {
                     Task {
                         do {
-                            viewModel.userId = try AuthServices.instance.getAuthUser().uid
                             try await viewModel.loadReports()
                         } catch {
                             print("Error fetching all data when view appear:", error.localizedDescription)

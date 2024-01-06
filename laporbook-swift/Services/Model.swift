@@ -43,4 +43,12 @@ struct ReportModel: Hashable, Codable {
     let userId: String?
     let fullname: String?
     let status: String?
+    let latitude: Double?
+    let longitude: Double?
+}
+
+struct LikeModel: Hashable, Codable {
+    let date: Date?
+    let author: String?
+    let id: String?
 }

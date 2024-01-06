@@ -13,7 +13,7 @@ final class MyReportViewModel: ObservableObject {
     @Published var userId: String = ""
     
     func loadReports() async throws {
-        self.data = try await ReportServices.instance.loadAllReports()
+        self.data = try await ReportServices.instance.loadAllReports(byId: self.userId)
     }
 }
 
@@ -55,7 +55,6 @@ struct MyReportView: View {
                         }
                     }
                 })
-                .padding(.top, 20)
                 .navigationBarTitleDisplayMode(.inline)
                 .navigationBarBackButtonHidden(true)
                 .toolbar {

@@ -13,13 +13,14 @@ final class AddReportViewModel: ObservableObject {
     @Published var deskripsi: String = ""
     @Published var selected: String = "Pembangunan"
     @Published var image: Image? = nil
+    @Published var coordinatPoint: (Double, Double) = (0, 0)
     
     func create(success: @escaping () -> (), failure: @escaping (Error) -> ()) {
         Task {
             do {
                 let render = ImageRenderer(content: image!)
                 let result = try await StorageServices.instance.saveImage(data: (render.uiImage?.jpegData(compressionQuality: 1))!)
-                try await ReportServices.instance.createReport(title: self.judul, instance: self.selected, desc: self.deskripsi, path: result.path, filename: result.filename)
+                try await ReportServices.instance.createReport(title: self.judul, instance: self.selected, desc: self.deskripsi, path: result.path, filename: result.filename, lat: self.coordinatPoint.0, long: self.coordinatPoint.1)
                 success()
             } catch {
                 failure(error)
@@ -188,6 +189,11 @@ struct AddReportView: View {
             }
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarBackground(Color(hex: LB.AppColors.primaryColor), for: .navigationBar)
+            .onAppear(
+                perform: {
+                    viewModel.coordinatPoint.0 = location.locationManager.location?.coordinate.latitude ?? 0
+                    viewModel.coordinatPoint.1 = location.locationManager.location?.coordinate.longitude ?? 0
+                })
         }
     }
 }

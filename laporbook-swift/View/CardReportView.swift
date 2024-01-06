@@ -10,6 +10,8 @@ import SDWebImageSwiftUI
 
 struct CardReportView: View {
     @Environment(\.colorScheme) var colorScheme
+    @State private var like = [LikeModel]()
+    
     var data: ReportModel?
     
     var body: some View {
@@ -50,6 +52,8 @@ struct CardReportView: View {
                     HStack(spacing: 0){
                         VStack{
                             Text(data?.status ?? "")
+                                .frame(width: 45)
+                                .fixedSize()
                                 .font(.custom("Poppins-Bold", size: 12))
                                 .foregroundStyle(.white)
                                 .padding()
@@ -59,7 +63,9 @@ struct CardReportView: View {
                             .frame(width: 2)
                             .overlay(.black)
                         VStack{
-                            Text("\(formatDate(data?.date ?? Date()))")
+                            //                            Text("\(formatDate(data?.date ?? Date()))")
+                            Text("\(like.count) Like")
+                                .frame(maxWidth: .infinity)
                                 .font(.custom("Poppins-Bold", size: 12))
                                 .foregroundStyle(.white)
                                 .padding()
@@ -70,6 +76,13 @@ struct CardReportView: View {
                 }
             }
         }
+        .onAppear(perform: {
+            Task {
+                do {
+                    self.like = try await ReportServices.instance.loadAllLikes(reportId: data?.id ?? "")
+                }
+            }
+        })
         .cornerRadius(10)
         .overlay(
             RoundedRectangle(cornerRadius: 10)
@@ -87,7 +100,7 @@ struct CardReportView: View {
         switch status {
         case "Posted":
             return Color(hex: LB.AppColors.dangerColor)
-        case "Process":
+        case "Proses":
             return Color(hex: LB.AppColors.warningColor)
         case "Done":
             return Color(hex: LB.AppColors.successColor)

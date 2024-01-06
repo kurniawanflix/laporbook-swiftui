@@ -12,7 +12,7 @@ final class ReportServices {
     static let instance = ReportServices()
     private init() { }
     
-    func createReport(title: String, location: String = "-", instance: String, desc: String, path: String, filename: String) async throws {
+    func createReport(title: String, location: String = "-", instance: String, desc: String, path: String, filename: String, lat: Double, long: Double) async throws {
         let user = try AuthServices.instance.getAuthUser()
         let fsUser = try await AuthServices.instance.getFSUser(user: user)
         let autoID = Firestore.firestore().collection("report").document().documentID
@@ -26,14 +26,18 @@ final class ReportServices {
             "imagePath": path,
             "imageFilename": filename,
             "status": "Posted",
-            "fullname": fsUser.fullname ?? ""
+            "fullname": fsUser.fullname ?? "",
+            "latitude": lat,
+            "longitude": long
         ]
         try await Firestore.firestore().collection("report").document(autoID).setData(data, merge: true)
     }
     
-    func loadAllReports() async throws -> [ReportModel] {
+    func loadAllReports(byId: String = "") async throws -> [ReportModel] {
         var tempArray = [ReportModel]()
-        let qs = try await Firestore.firestore().collection("report").getDocuments()
+        let allQuery = try await Firestore.firestore().collection("report").getDocuments()
+        let specificQuery = try await Firestore.firestore().collection("report").whereField("userId", isEqualTo: byId).getDocuments()
+        let qs = byId == "" ? allQuery : specificQuery
         for report in qs.documents {
             let timestamp = report["date"] as? Timestamp
             let date = timestamp?.dateValue() as? Date
@@ -46,12 +50,54 @@ final class ReportServices {
             let uid = report["userId"] as? String
             let fullname = report["fullname"] as? String
             let status = report["status"] as? String
-            tempArray.append(ReportModel(date: date, id: id, desc: desc, imgFilename: imgFile, imgPath: imgPath, instance: instance, title: title, userId: uid, fullname: fullname, status: status))
+            let lat = report["latitude"] as? Double
+            let long = report["longitude"] as? Double
+            tempArray.append(ReportModel(date: date, id: id, desc: desc, imgFilename: imgFile, imgPath: imgPath, instance: instance, title: title, userId: uid, fullname: fullname, status: status, latitude: lat, longitude: long))
         }
         return tempArray
     }
     
     func changeStatus(to newStatus: String, id: String) async throws {
         try await Firestore.firestore().collection("report").document(id).setData(["status": newStatus], merge: true)
+    }
+    
+    func loadAllLikes(reportId: String) async throws -> [LikeModel] {
+        var tempArray = [LikeModel]()
+        let qs = try await Firestore.firestore().collection("report").document(reportId).collection("likes").getDocuments()
+        for like in qs.documents {
+            let timestamp = like["date"] as? Timestamp
+            let date = timestamp?.dateValue() as? Date
+            let id = like["id"] as? String
+            let author = like["author"] as? String
+            tempArray.append(LikeModel(date: date, author: author, id: id))
+        }
+        return tempArray
+    }
+    
+    func checkLike(array: [LikeModel], query: String) -> Bool {
+        return array.contains {
+            $0.author == query
+        }
+    }
+    
+    func filterModel(by author: String, in models: [LikeModel]) -> LikeModel? {
+        return models.first { $0.author == author }
+    }
+    
+    func addLike(reportId: String, author: String) async throws -> String {
+        let autoID = Firestore.firestore().collection("report").document(reportId).collection("likes").document().documentID
+        let data: [String: Any] = [
+            "date": Timestamp(),
+            "author": author,
+            "id": autoID
+        ]
+        
+        try await Firestore.firestore().collection("report").document(reportId).collection("likes").document(autoID).setData(data)
+        
+        return autoID
+    }
+    
+    func delLike(reportId: String, likeId: String) async throws {
+        try await Firestore.firestore().collection("report").document(reportId).collection("likes").document(likeId).delete()
     }
 }
