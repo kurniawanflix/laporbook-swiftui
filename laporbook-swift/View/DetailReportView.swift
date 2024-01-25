@@ -12,6 +12,10 @@ import SDWebImageSwiftUI
 @MainActor
 final class DetailReportViewModel: ObservableObject {
     @Published var user: FSUser = FSUser(uid: "", email: "", fullname: "", phone: "", role: "")
+    
+    @Published var comment: String = ""
+    @Published var allComments: [CommentModel] = []
+    
     @Published var isLiked: Bool = false
     
     @Published var allLikes: [LikeModel] = []
@@ -33,11 +37,18 @@ final class DetailReportViewModel: ObservableObject {
     func delLike(reportId: String, likeId: String) async throws {
         try await ReportServices.instance.delLike(reportId: reportId, likeId: likeId)
     }
+    
+    func addComm(reportId: String) async throws {
+        let auth = try AuthServices.instance.getAuthUser()
+        let result = try await AuthServices.instance.getFSUser(user: auth)
+        try await ReportServices.instance.createComment(reportId: reportId, content: self.comment, author: result.fullname ?? "")
+    }
 }
 
 struct DetailReportView: View {
     @Environment(\.presentationMode) var presentation
     @State private var changeStatusDialog: Bool = false
+    @State private var addComentDetent: Bool = false
     @StateObject private var viewModel = DetailReportViewModel()
     
     var data: ReportModel?
@@ -178,6 +189,42 @@ struct DetailReportView: View {
                     }, label: {
                         CustomButtonChangeView(name: "Ubah Status")
                     })
+                    NavigationLink(destination: AddCommentView(reportId: data?.id ?? "")){
+                        CustomButtonChangeView(name: "Tambah Komentar")
+                    }
+                    
+                    Text("List Komentar")
+                        .font(.custom("Poppins-Bold", size: 20))
+                        .padding(.top, 20)
+                    
+                    VStack{
+                        if viewModel.allComments.isEmpty {
+                            VStack{
+                                Text("Komentar masih kosong")
+                                    .font(.custom("Poppins-Bold", size: 14))
+                                    .foregroundStyle(.white)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 100)
+                            .background(Color.accentColor)
+                            .cornerRadius(10)
+                        } else {
+                            ForEach(viewModel.allComments, id: \.self) { comment in
+                                VStack{
+                                    Text(comment.author ?? "")
+                                        .font(.custom("Poppins-Bold", size: 14))
+                                        .foregroundStyle(.white)
+                                    Text(comment.content ?? "")
+                                        .font(.custom("Poppins-Regular", size: 12))
+                                        .foregroundStyle(.white)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 100)
+                                .background(Color.accentColor)
+                                .cornerRadius(10)
+                            }
+                        }
+                    }
                 }
                 .padding()
             })
@@ -216,6 +263,7 @@ struct DetailReportView: View {
                 do {
                     let auth = try AuthServices.instance.getAuthUser()
                     viewModel.user = try await AuthServices.instance.getFSUser(user: auth)
+                    viewModel.allComments = try await ReportServices.instance.loadAllComments(reportId: data?.id ?? "")
                     viewModel.allLikes = try await ReportServices.instance.loadAllLikes(reportId: data?.id ?? "")
                     viewModel.isLiked = ReportServices.instance.checkLike(array: viewModel.allLikes, query: viewModel.user.fullname ?? "")
                     viewModel.like = ReportServices.instance.filterModel(by: viewModel.user.fullname ?? "", in: viewModel.allLikes)

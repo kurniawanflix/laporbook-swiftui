@@ -52,3 +52,10 @@ struct LikeModel: Hashable, Codable {
     let author: String?
     let id: String?
 }
+
+struct CommentModel: Hashable, Codable {
+    let date: Date?
+    let content: String?
+    let author: String?
+    let id: String?
+}
